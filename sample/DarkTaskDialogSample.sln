@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.7.34221.43
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DarkTaskDialogSample", "DarkTaskDialogSample.vcxproj", "{7BB47558-864C-45A5-B565-8FA6A8A2F7B7}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7BB47558-864C-45A5-B565-8FA6A8A2F7B7}.Debug|x64.ActiveCfg = Debug|x64
+		{7BB47558-864C-45A5-B565-8FA6A8A2F7B7}.Debug|x64.Build.0 = Debug|x64
+		{7BB47558-864C-45A5-B565-8FA6A8A2F7B7}.Debug|x86.ActiveCfg = Debug|Win32
+		{7BB47558-864C-45A5-B565-8FA6A8A2F7B7}.Debug|x86.Build.0 = Debug|Win32
+		{7BB47558-864C-45A5-B565-8FA6A8A2F7B7}.Release|x64.ActiveCfg = Release|x64
+		{7BB47558-864C-45A5-B565-8FA6A8A2F7B7}.Release|x64.Build.0 = Release|x64
+		{7BB47558-864C-45A5-B565-8FA6A8A2F7B7}.Release|x86.ActiveCfg = Release|Win32
+		{7BB47558-864C-45A5-B565-8FA6A8A2F7B7}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F79A5DB7-E136-4C59-9842-DB2D763C8F1D}
+	EndGlobalSection
+EndGlobal
