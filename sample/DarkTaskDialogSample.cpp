@@ -1,4 +1,5 @@
-//(c) Softros Systems
+// © Softros Systems
+// GPL3 license
 
 
 #include <Windows.h>
@@ -38,18 +39,18 @@ HRESULT CALLBACK taskdialogcallback(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
         if (std::wstring(L"off") == link)
         {
             //DarkProgressBar::disable();
-            SFTRS::DarkTaskDialog::disable();
+            SFTRS::DarkTaskDialog::setTheme(SFTRS::DarkTaskDialog::light);
         }
 
         if (std::wstring(L"on") == link)
         {
             //DarkProgressBar::enable();
-            DarkTaskDialog::enable();
+            SFTRS::DarkTaskDialog::setTheme(SFTRS::DarkTaskDialog::dark);
         }
 
         if (std::wstring(L"page2") == link)
         {
-            TASKDIALOGCONFIG page2;
+            TASKDIALOGCONFIG page2{};
             page2.cbSize = sizeof(TASKDIALOGCONFIG);
             page2.dwCommonButtons = TDCBF_CLOSE_BUTTON;
             page2.pszWindowTitle = L"page #2";
@@ -70,7 +71,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
 
     //DarkProgressBar::enable();
-    DarkTaskDialog::enable();
+    SFTRS::DarkTaskDialog::setTheme(SFTRS::DarkTaskDialog::dark);
 
     const TASKDIALOG_BUTTON radio[] = { {0, L"Radio button\nwith two lines"},
                                     {1, L"Second button is disabled"},
@@ -115,6 +116,6 @@ Where is also <A HREF=\"page2\">another page</A> added for testing purposes";
     Sleep(1);
 
     //DarkProgressBar::disable();
-    DarkTaskDialog::disable();
+    //DarkTaskDialog::disable();
 
 }

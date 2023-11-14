@@ -1,3 +1,6 @@
+// © Softros Systems
+// GPL3 license
+
 #pragma once
 
 #include <windows.h>
@@ -26,6 +29,8 @@
 namespace SFTRS {
     namespace DarkTaskDialog
     {
+        enum Theme { dark, light };
+
         namespace detail
         {
             /* COLORS */
@@ -45,10 +50,7 @@ namespace SFTRS {
             static std::set<HWND> taskDialogs;
 
             /* DATA STORAGE */
-            ULONG_PTR gdiplusToken;
-            Gdiplus::GdiplusStartupInput gdiplusStartupInput;
-            static bool fullEnabled = false;
-            static int referenceCount = 0;
+            static Theme theme;
             struct originalCllbackData
             {
                 PFTASKDIALOGCALLBACK pfCallback;
@@ -211,11 +213,7 @@ namespace SFTRS {
                     }
 
                     DTTOPTS options = { sizeof(DTTOPTS), DTT_TEXTCOLOR, color };
-                    /*{
-                        .dwSize = sizeof(DTTOPTS),
-                        .dwFlags = DTT_TEXTCOLOR,
-                        .crText = color
-                    };*/
+      
                     retVal = trueDrawThemeTextEx(hTheme, hdc, iPartId, iStateId, pszText, cchText, dwTextFlags, (LPRECT)pRect, &options);
                 }
                 else
@@ -325,6 +323,35 @@ namespace SFTRS {
 
             LRESULT CALLBACK Subclassproc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
             {
+                if (uMsg == TDM_NAVIGATE_PAGE)
+                {
+                    TASKDIALOGCONFIG* trueCongif = (TASKDIALOGCONFIG*)lParam;
+                    originalCllbackData* trueCallBackData = (originalCllbackData*)dwRefData;
+                    trueCallBackData->pfCallback = trueCongif ? trueCongif->pfCallback : NULL;
+                    trueCallBackData->lpCallbackData = trueCongif ? trueCongif->lpCallbackData : NULL;
+
+                    TASKDIALOGCONFIG myConfig = trueCongif ? *trueCongif : TASKDIALOGCONFIG{ sizeof(TASKDIALOGCONFIG) };
+                    myConfig.pfCallback = taskdialogcallback;
+                    myConfig.lpCallbackData = (LONG_PTR)trueCallBackData;
+
+                    DetourTransactionBegin();
+                    DetourUpdateThread(GetCurrentThread());
+                    DetourAttach(&(PVOID&)trueCreateWindowEx, myCreateWindowEx);
+                    DetourTransactionCommit();
+
+                    LRESULT retVal = DefSubclassProc(hWnd, uMsg, wParam, LPARAM(&myConfig));
+
+                    DetourTransactionBegin();
+                    DetourUpdateThread(GetCurrentThread());
+                    DetourDetach(&(PVOID&)trueCreateWindowEx, myCreateWindowEx);
+                    DetourTransactionCommit();
+
+                    return retVal;
+                }
+
+                if(theme == light)
+                    return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+
                 switch (uMsg)
                 {
                 case WM_ERASEBKGND:
@@ -349,33 +376,6 @@ namespace SFTRS {
 
                 case WM_CTLCOLORDLG:
                     return (LRESULT)darkBrush; // windows background on extender resize up (Windows 10 only)
-
-                case TDM_NAVIGATE_PAGE:
-                {
-                    TASKDIALOGCONFIG* trueCongif = (TASKDIALOGCONFIG*)lParam;
-                    originalCllbackData* trueCallBackData = (originalCllbackData*)dwRefData;
-
-                    trueCallBackData->pfCallback = trueCongif ? trueCongif->pfCallback : NULL;
-                    trueCallBackData->lpCallbackData = trueCongif ? trueCongif->lpCallbackData : NULL;
-
-                    TASKDIALOGCONFIG myConfig = trueCongif ? *trueCongif : TASKDIALOGCONFIG{ sizeof(TASKDIALOGCONFIG) };
-                    myConfig.pfCallback = taskdialogcallback;
-                    myConfig.lpCallbackData = (LONG_PTR)trueCallBackData;
-
-                    DetourTransactionBegin();
-                    DetourUpdateThread(GetCurrentThread());
-                    DetourAttach(&(PVOID&)trueCreateWindowEx, myCreateWindowEx);
-                    DetourTransactionCommit();
-
-                    LRESULT retVal = DefSubclassProc(hWnd, uMsg, wParam, LPARAM(&myConfig));
-
-                    DetourTransactionBegin();
-                    DetourUpdateThread(GetCurrentThread());
-                    DetourDetach(&(PVOID&)trueCreateWindowEx, myCreateWindowEx);
-                    DetourTransactionCommit();
-
-                    return retVal;
-                }
                 }
 
                 painting++;
@@ -384,29 +384,6 @@ namespace SFTRS {
                 return retVal;
             }
 
-            BOOL CALLBACK EnumChildProcRemove(HWND hwnd, LPARAM lParam)
-            {
-                EnumChildWindows(hwnd, EnumChildProcRemove, 0);
-                RemoveWindowSubclass(hwnd, Subclassproc, (UINT_PTR)hwnd);
-
-                auto className = wndClass(hwnd);
-                if (className == WC_BUTTON || className == L"DirectUIHWND" || className == WC_SCROLLBAR)
-                {
-                    SetWindowTheme(hwnd, NULL, NULL);
-                }
-
-                if (className == WC_LINK)
-                {
-                    LITEM linkChanges = { LIF_ITEMINDEX | LIF_STATE, 0, 0, LIS_DEFAULTCOLORS };
-
-                    while (SendMessage(hwnd, LM_SETITEM, 0, (LPARAM)&linkChanges))
-                    {
-                        linkChanges.iLink++;
-                    }
-                }
-
-                return TRUE;
-            }
 
             BOOL CALLBACK EnumChildProc(HWND hwnd, LPARAM lParam)
             {
@@ -416,40 +393,93 @@ namespace SFTRS {
 
                 if (className == WC_LINK) // make links the same color as text
                 {
-                    LITEM linkChanges = { LIF_ITEMINDEX | LIF_STATE, 0, LIS_DEFAULTCOLORS, LIS_DEFAULTCOLORS };
+                    LITEM linkChanges = { LIF_ITEMINDEX | LIF_STATE, 0, theme==dark?LIS_DEFAULTCOLORS:0, LIS_DEFAULTCOLORS };
                     while (SendMessage(hwnd, LM_SETITEM, 0, (LPARAM)&linkChanges))
                     {
                         linkChanges.iLink++;
                     }
                 }
 
-                // make sure we do not call SetWindowTheme for DirectUIHWND second time or where might be sizing glitch on second page
-                if (GetWindowSubclass(hwnd, Subclassproc, (UINT_PTR)hwnd, NULL))
-                    return TRUE;
+                if(theme == light)
+                    RemoveWindowSubclass(hwnd, Subclassproc, (UINT_PTR)hwnd);
+                else
+                {
+                    // make sure we do not call SetWindowTheme for DirectUIHWND second time or where might be sizing glitch on second page
+                    if (GetWindowSubclass(hwnd, Subclassproc, (UINT_PTR)hwnd, NULL))
+                        return TRUE;
 
-                SetWindowSubclass(hwnd, Subclassproc, (UINT_PTR)hwnd, 0); // subclass all children or they can flash white on first WM_ERASEBKGND
+                    SetWindowSubclass(hwnd, Subclassproc, (UINT_PTR)hwnd, 0); // subclass all children or they can flash white on first WM_ERASEBKGND
+                }
 
+                if (className == L"DirectUIHWND")
+                {
+                    HTHEME duitheme = GetWindowTheme(hwnd);
+                    Sleep(1);
+                }
                 if (className == WC_BUTTON || className == L"DirectUIHWND" || className == WC_SCROLLBAR)
                 {
-                    SetWindowTheme(hwnd, L"DarkMode_Explorer", NULL);
+                    SetWindowTheme(hwnd, theme==dark ? L"DarkMode_Explorer" : L"Button", NULL);
                 }
 
                 return TRUE;
             }
 
+            void update(HWND hwnd)
+            {
+                BOOL value = theme==dark ? TRUE : FALSE;
+                DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));
+                EnumChildWindows(hwnd, EnumChildProc, 0);
+            }
+
+            void ensureDetoursSet(bool onCreate = false)
+            {
+                static bool isSetNow = false;
+                bool mustBeSet = theme == dark && (onCreate || taskDialogs.size());
+                if (isSetNow == mustBeSet)
+                    return;
+
+                DetourTransactionBegin();
+                DetourUpdateThread(GetCurrentThread());
+
+                if (mustBeSet)
+                {
+                    DetourAttach(&(PVOID&)trueGetThemeColor, myGetThemeColor);
+                    DetourAttach(&(PVOID&)trueDrawThemeBackgroundEx, myDrawThemeBackgroundEx);
+                    DetourAttach(&(PVOID&)trueDrawThemeText, myDrawThemeText);
+                    DetourAttach(&(PVOID&)trueDrawThemeTextEx, myDrawThemeTextEx);
+                    DetourAttach(&(PVOID&)trueDrawThemeBackground, myDrawThemeBackground);
+                }
+                else
+                {
+                    DetourDetach(&(PVOID&)trueGetThemeColor, myGetThemeColor);
+                    DetourDetach(&(PVOID&)trueDrawThemeBackgroundEx, myDrawThemeBackgroundEx);
+                    DetourDetach(&(PVOID&)trueDrawThemeText, myDrawThemeText);
+                    DetourDetach(&(PVOID&)trueDrawThemeTextEx, myDrawThemeTextEx);
+                    DetourDetach(&(PVOID&)trueDrawThemeBackground, myDrawThemeBackground);
+                }
+                DetourTransactionCommit();
+
+                static ULONG_PTR gdiplusToken;
+                static Gdiplus::GdiplusStartupInput gdiplusStartupInput;
+                if (mustBeSet)
+                    GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
+                else
+                    Gdiplus::GdiplusShutdown(gdiplusToken);
+
+                isSetNow = mustBeSet;
+            }
 
             HRESULT CALLBACK taskdialogcallback(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, LONG_PTR lpRefData)
             {
                 if (msg == TDN_DIALOG_CONSTRUCTED) // called on each new page including first one
                 {
-                    EnumChildWindows(hwnd, EnumChildProc, 0);
+                    update(hwnd);
                 }
                 if (msg == TDN_CREATED) // called only once
                 {
                     taskDialogs.insert(hwnd);
+
                     SetWindowSubclass(hwnd, Subclassproc, (UINT_PTR)hwnd, lpRefData);
-                    BOOL value = TRUE;
-                    DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));
                 }
                 if (msg == TDN_DESTROYED)
                 {
@@ -464,88 +494,47 @@ namespace SFTRS {
                 return S_OK;
             }
 
-            void internal_enable()
-            {
-                if (referenceCount == 0)
-                {
-                    fullEnabled = true;
-                    GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
-                    DetourTransactionBegin();
-                    DetourUpdateThread(GetCurrentThread());
-                    DetourAttach(&(PVOID&)trueGetThemeColor, myGetThemeColor);
-                    DetourAttach(&(PVOID&)trueDrawThemeBackgroundEx, myDrawThemeBackgroundEx);
-                    DetourAttach(&(PVOID&)trueDrawThemeText, myDrawThemeText);
-                    DetourAttach(&(PVOID&)trueDrawThemeTextEx, myDrawThemeTextEx);
-                    DetourAttach(&(PVOID&)trueDrawThemeBackground, myDrawThemeBackground);
-                    DetourTransactionCommit();
-                }
-                referenceCount++;
-            }
-
-            void internal_disable()
-            {
-                referenceCount--;
-                if (referenceCount == 0)
-                {
-                    fullEnabled = false;
-                    DetourTransactionBegin();
-                    DetourUpdateThread(GetCurrentThread());
-                    DetourDetach(&(PVOID&)trueGetThemeColor, myGetThemeColor);
-                    DetourDetach(&(PVOID&)trueDrawThemeBackgroundEx, myDrawThemeBackgroundEx);
-                    DetourDetach(&(PVOID&)trueDrawThemeText, myDrawThemeText);
-                    DetourDetach(&(PVOID&)trueDrawThemeTextEx, myDrawThemeTextEx);
-                    DetourDetach(&(PVOID&)trueDrawThemeBackground, myDrawThemeBackground);
-                    DetourTransactionCommit();
-                    Gdiplus::GdiplusShutdown(gdiplusToken);
-                }
-            }
 
             HRESULT WINAPI myTaskDialogIndirect(const TASKDIALOGCONFIG* pTaskConfig, int* pnButton, int* pnRadioButton, BOOL* pfVerificationFlagChecked)
             {
-                internal_enable();
+                ensureDetoursSet(true);
+
                 originalCllbackData callBackData = { pTaskConfig->pfCallback, pTaskConfig->lpCallbackData };
                 TASKDIALOGCONFIG myConfig = *pTaskConfig;
                 myConfig.lpCallbackData = (LONG_PTR)&callBackData;
                 myConfig.pfCallback = taskdialogcallback;
                 HRESULT retVal = trueTaskDialogIndirect(&myConfig, pnButton, pnRadioButton, pfVerificationFlagChecked);
-                internal_disable();
+
+                ensureDetoursSet();
+
                 return retVal;
             }
         }
 
-        void enable(HWND hwnd = NULL)
+        void setTheme(Theme theme)
         {
-            DetourTransactionBegin();
-            DetourUpdateThread(GetCurrentThread());
-            DetourAttach(&(PVOID&)detail::trueTaskDialogIndirect, detail::myTaskDialogIndirect);
-            if (hwnd)
+            static bool initialized = false;
+            if (!initialized)
             {
-                detail::internal_enable();
-                // !!! NEXT: use taskdialogcallback only to get handle and enum childs
+                DetourTransactionBegin();
+                DetourUpdateThread(GetCurrentThread());
+                DetourAttach(&(PVOID&)detail::trueTaskDialogIndirect, detail::myTaskDialogIndirect);
+                DetourTransactionCommit();
+                initialized = true;
             }
-            DetourTransactionCommit();
-        };
 
-        void disable()
-        {
-            DetourTransactionBegin();
-            DetourUpdateThread(GetCurrentThread());
-            DetourDetach(&(PVOID&)detail::trueTaskDialogIndirect, detail::myTaskDialogIndirect);
-            DetourTransactionCommit();
+            if (detail::theme == theme)
+                return;
 
-            detail::referenceCount = 1; //forced disable 
-            detail::internal_disable();
+            detail::theme = theme;
+
+            detail::ensureDetoursSet();
+
             for (HWND hwnd : detail::taskDialogs)
             {
-                BOOL value = FALSE;
-                DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));
-
-                RemoveWindowSubclass(hwnd, detail::Subclassproc, (UINT_PTR)hwnd);
-                EnumChildWindows(hwnd, detail::EnumChildProcRemove, 0);
+                detail::update(hwnd);
                 SendMessage(hwnd, WM_PAINT, 0, 0);
             }
-            detail::taskDialogs.clear();
-        };
-
+        }
     }
 }
