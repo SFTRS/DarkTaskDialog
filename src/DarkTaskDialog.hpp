@@ -334,18 +334,21 @@ namespace SFTRS {
                     myConfig.pfCallback = taskdialogcallback;
                     myConfig.lpCallbackData = (LONG_PTR)trueCallBackData;
 
-                    DetourTransactionBegin();
-                    DetourUpdateThread(GetCurrentThread());
-                    DetourAttach(&(PVOID&)trueCreateWindowEx, myCreateWindowEx);
-                    DetourTransactionCommit();
-
+                    if (theme == dark)
+                    {
+                        DetourTransactionBegin();
+                        DetourUpdateThread(GetCurrentThread());
+                        DetourAttach(&(PVOID&)trueCreateWindowEx, myCreateWindowEx);
+                        DetourTransactionCommit();
+                    }
                     LRESULT retVal = DefSubclassProc(hWnd, uMsg, wParam, LPARAM(&myConfig));
-
-                    DetourTransactionBegin();
-                    DetourUpdateThread(GetCurrentThread());
-                    DetourDetach(&(PVOID&)trueCreateWindowEx, myCreateWindowEx);
-                    DetourTransactionCommit();
-
+                    if (theme == dark)
+                    {
+                        DetourTransactionBegin();
+                        DetourUpdateThread(GetCurrentThread());
+                        DetourDetach(&(PVOID&)trueCreateWindowEx, myCreateWindowEx);
+                        DetourTransactionCommit();
+                    }
                     return retVal;
                 }
 
@@ -384,10 +387,12 @@ namespace SFTRS {
                 return retVal;
             }
 
-
+            enum Reason {ThemeSwith, NewPage};
             BOOL CALLBACK EnumChildProc(HWND hwnd, LPARAM lParam)
             {
-                EnumChildWindows(hwnd, EnumChildProc, 0);
+                Reason reason = (Reason)lParam;
+
+                EnumChildWindows(hwnd, EnumChildProc, lParam);
 
                 auto className = wndClass(hwnd);
 
@@ -410,25 +415,34 @@ namespace SFTRS {
 
                     SetWindowSubclass(hwnd, Subclassproc, (UINT_PTR)hwnd, 0); // subclass all children or they can flash white on first WM_ERASEBKGND
                 }
+                
+                if (className == WC_BUTTON || className == WC_SCROLLBAR)
+                {
+                    SetWindowTheme(hwnd, theme == dark ? L"DarkMode_Explorer" : NULL, NULL);
+                    return TRUE;
+                }
 
                 if (className == L"DirectUIHWND")
                 {
-                    HTHEME duitheme = GetWindowTheme(hwnd);
-                    Sleep(1);
-                }
-                if (className == WC_BUTTON || className == L"DirectUIHWND" || className == WC_SCROLLBAR)
-                {
-                    SetWindowTheme(hwnd, theme==dark ? L"DarkMode_Explorer" : L"Button", NULL);
+                    if (theme == light && reason == NewPage)
+                    {
+                        return TRUE;
+                    }
+
+                    WINDOWPLACEMENT pos = {};
+                    GetWindowPlacement(GetParent(hwnd), &pos);
+                    SetWindowTheme(hwnd, theme == dark ? L"DarkMode_Explorer" : NULL, NULL);
+                    SetWindowPlacement(GetParent(hwnd), &pos);
                 }
 
                 return TRUE;
             }
 
-            void update(HWND hwnd)
+            void update(HWND hwnd, Reason reason)
             {
                 BOOL value = theme==dark ? TRUE : FALSE;
                 DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));
-                EnumChildWindows(hwnd, EnumChildProc, 0);
+                EnumChildWindows(hwnd, EnumChildProc, (LPARAM)reason);
             }
 
             void ensureDetoursSet(bool onCreate = false)
@@ -473,7 +487,7 @@ namespace SFTRS {
             {
                 if (msg == TDN_DIALOG_CONSTRUCTED) // called on each new page including first one
                 {
-                    update(hwnd);
+                    update(hwnd, NewPage);
                 }
                 if (msg == TDN_CREATED) // called only once
                 {
@@ -532,7 +546,7 @@ namespace SFTRS {
 
             for (HWND hwnd : detail::taskDialogs)
             {
-                detail::update(hwnd);
+                detail::update(hwnd, detail::ThemeSwith);
                 SendMessage(hwnd, WM_PAINT, 0, 0);
             }
         }
