@@ -38,16 +38,30 @@ namespace SFTRS {
             const HBRUSH darkBrush = CreateSolidBrush(RGB(36, 36, 36));
             const HBRUSH notSoDarkBrush = CreateSolidBrush(RGB(51, 51, 51));
 
-            /* ORIGINAL FUNCTIONS DECLARATIONS */
-            static HRESULT(WINAPI* trueGetThemeColor)(HTHEME, int, int, int, COLORREF*) = GetThemeColor;                                                   // Color of text: main header, check box, expanded area, expander button
-            static HRESULT(WINAPI* trueDrawThemeText)(HTHEME, HDC, int, int, LPCWSTR, int, DWORD, DWORD, LPCRECT) = DrawThemeText;                         // Color of text: radio buttons, comman link button main text
-            static HRESULT(WINAPI* trueDrawThemeTextEx)(HTHEME, HDC, int, int, LPCWSTR, int, DWORD, LPRECT, const DTTOPTS*) = DrawThemeTextEx;             // Color of text: comman link button second line
-            static HRESULT(WINAPI* trueDrawThemeBackgroundEx)(HTHEME, HDC, int, int, LPCRECT, const DTBGOPTS*) = DrawThemeBackgroundEx;                    // Primary panel background, secondary panel background, footnote panel background, color of separator, Windows 11: expander button, checkbox
-            static HRESULT(WINAPI* trueDrawThemeBackground)(HTHEME, HDC, int, int, LPCRECT, LPCRECT) = DrawThemeBackground;                                // Color of command link button arrow, progress bars
-            static HRESULT(WINAPI* trueTaskDialogIndirect)(const TASKDIALOGCONFIG*, int*, int*, BOOL*) = TaskDialogIndirect;                               // Wrap cllaback to init full detourings, enum childs and subclass them
-            static HWND(WINAPI* trueCreateWindowEx)(DWORD, LPCWSTR, LPCWSTR, DWORD, int, int, int, int, HWND, HMENU, HINSTANCE, LPVOID) = CreateWindowExW; // Early subclassing of SysLink and enabling its theming
+            /* ORIGINAL FUNCTIONS */
 
+            //Color of text for main headers, check boxes, expanded areas, and expander buttons.
+            static HRESULT(WINAPI* trueGetThemeColor)(HTHEME, int, int, int, COLORREF*) = GetThemeColor;   
+
+            //Color of text for radio buttons and command link button main text.
+            static HRESULT(WINAPI* trueDrawThemeText)(HTHEME, HDC, int, int, LPCWSTR, int, DWORD, DWORD, LPCRECT) = DrawThemeText;
+            
+            //Color of text for the second line of command link buttons.
+            static HRESULT(WINAPI* trueDrawThemeTextEx)(HTHEME, HDC, int, int, LPCWSTR, int, DWORD, LPRECT, const DTTOPTS*) = DrawThemeTextEx; 
+
+            //Primary panel background, secondary panel background, footnote panel background, separator color, and Windows 11-specific: expander button and checkbox.
+            static HRESULT(WINAPI* trueDrawThemeBackgroundEx)(HTHEME, HDC, int, int, LPCRECT, const DTBGOPTS*) = DrawThemeBackgroundEx;
+            
+            //Color of command link button arrows and progress bars.
+            static HRESULT(WINAPI* trueDrawThemeBackground)(HTHEME, HDC, int, int, LPCRECT, LPCRECT) = DrawThemeBackground; 
+            
+            //Wraps callback to enable detours for all necessary functions and enumerates children to subclass them.
+            static HRESULT(WINAPI* trueTaskDialogIndirect)(const TASKDIALOGCONFIG*, int*, int*, BOOL*) = TaskDialogIndirect;
+            
+            //Early subclassing of the SysLink control to eliminate blinking during page switches.
+            static HWND(WINAPI* trueCreateWindowEx)(DWORD, LPCWSTR, LPCWSTR, DWORD, int, int, int, int, HWND, HMENU, HINSTANCE, LPVOID) = CreateWindowExW;
             static std::set<HWND> taskDialogs;
+
 
             /* DATA STORAGE */
             static Theme theme;
@@ -179,11 +193,11 @@ namespace SFTRS {
 
                 if (iPropId == TMT_TEXTCOLOR && iPartId == TDLG_MAININSTRUCTIONPANE)
                 {
-                    *pColor = increaseBrightness(*pColor, 150); // main header
+                    *pColor = increaseBrightness(*pColor, 150); // Main header.
                 }
                 else if (iPropId == TMT_TEXTCOLOR)
                 {
-                    *pColor = white;  // check box text, expanded text, expander button text
+                    *pColor = white; // Text color for check boxes, expanded text, and expander button text.
                 }
                 return retVal;
             }
@@ -250,7 +264,8 @@ namespace SFTRS {
                         break;
                     case TDLG_EXPANDOBUTTON:
                     {
-                        // Windows 11 has button without background which becomes unrecognizable on dark background, so we invert button, cannot use the same technique on Windows 10, as button's border become chipped
+                        // In Windows 11, buttons lack background, making them indistinguishable on dark backgrounds.
+                        // To address this, we invert the button. This technique isn't applicable to Windows 10 as it causes the button's border to appear chipped.
                         static enum { yes, no, unknown } mustInvertButton = unknown;
                         if (mustInvertButton == unknown)
                         {
@@ -303,7 +318,7 @@ namespace SFTRS {
                 return hwnd;
             }
 
-            /* ALL CHILDREN SUBCLASSINGS AND CALLBACKS */
+            /* ALL CHILDREN SUBCLASSING AND CALLBACKS */
 
             HRESULT CALLBACK taskdialogcallback(HWND, UINT, WPARAM, LPARAM, LONG_PTR);
 
@@ -345,7 +360,7 @@ namespace SFTRS {
                 {
                 case WM_ERASEBKGND:
                 {
-                    SetTextColor((HDC)wParam, white); // Color for SysLink, must be set in its parent
+                    SetTextColor((HDC)wParam, white); // Color for SysLink, which must be set in its parent.
 
                     if (!painting)
                     {
@@ -357,14 +372,14 @@ namespace SFTRS {
 
                     if (wndClass(hWnd) == WC_LINK)
                     {
-                        return 1; // Do not erase backround for links or they will blink white on extender and page switch
+                        return 1; // Avoid erasing the background for links, as they will blink white on the extender and during page switches.
                     }
 
                     break;
                 }
 
                 case WM_CTLCOLORDLG:
-                    return (LRESULT)darkBrush; // windows background on extender resize up (Windows 10 only)
+                    return (LRESULT)darkBrush; // Window background color when the extender resizes upward (Windows 10 only).
                 }
 
                 painting++;
@@ -394,11 +409,12 @@ namespace SFTRS {
                     RemoveWindowSubclass(hwnd, Subclassproc, (UINT_PTR)hwnd);
                 else
                 {
-                    // make sure we do not call SetWindowTheme for DirectUIHWND second time or where might be sizing glitch on second page
+                    // Ensure SetWindowTheme is not called for DirectUIHWND a second time,
+                    // as it may cause sizing glitches on the second page.
                     if (GetWindowSubclass(hwnd, Subclassproc, (UINT_PTR)hwnd, NULL))
                         return TRUE;
 
-                    SetWindowSubclass(hwnd, Subclassproc, (UINT_PTR)hwnd, 0); // subclass all children or they can flash white on first WM_ERASEBKGND
+                    SetWindowSubclass(hwnd, Subclassproc, (UINT_PTR)hwnd, 0); // Subclass all children to prevent white flashing on the first WM_ERASEBKGND.
                 }
                 
                 if (className == WC_BUTTON || className == WC_SCROLLBAR)
@@ -468,7 +484,7 @@ namespace SFTRS {
 
             HRESULT CALLBACK taskdialogcallback(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, LONG_PTR lpRefData)
             {
-                if (msg == TDN_DIALOG_CONSTRUCTED) // called on each new page including first one
+                if (msg == TDN_DIALOG_CONSTRUCTED) // Called on each new page, including the first one.
                 {
                     update(hwnd, NewPage);
                 }
