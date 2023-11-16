@@ -1,5 +1,6 @@
 // © Softros Systems
-// GPL3 license
+// GPL3
+// github.com/SFTRS/DarkTaskDialog
 
 
 #include <Windows.h>
@@ -12,110 +13,106 @@
 
 #include "..\src\DarkTaskDialog.hpp"
 
+static TASKDIALOGCONFIG page1 = {};
+static TASKDIALOGCONFIG page2 = {};
+
 HRESULT CALLBACK taskdialogcallback(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, LONG_PTR lpRefData)
 {
-    if (msg == TDN_NAVIGATED)
+    if (msg == TDN_CREATED || msg == TDN_NAVIGATED && lpRefData==1)
     {
-        /* page 2
-        SendMessage(hwnd, TDM_SET_BUTTON_ELEVATION_REQUIRED_STATE, 1, 1);
-        SendMessage(hwnd, TDM_ENABLE_BUTTON, 1, 0);
-        SendMessage(hwnd, TDM_ENABLE_RADIO_BUTTON, 1, 0);
-        SendMessage(hwnd, TDM_SET_PROGRESS_BAR_MARQUEE, TRUE, 0);
-        */
-    }
-    if (msg == TDN_CREATED)
-    {
-        SendMessage(hwnd, TDM_SET_BUTTON_ELEVATION_REQUIRED_STATE, 2, 1);
-        SendMessage(hwnd, TDM_SET_BUTTON_ELEVATION_REQUIRED_STATE, 3, 1);
-        SendMessage(hwnd, TDM_ENABLE_BUTTON, 1, 0);
-        SendMessage(hwnd, TDM_ENABLE_BUTTON, 3, 0);
-        SendMessage(hwnd, TDM_ENABLE_RADIO_BUTTON, 1, 0);
+        SendMessage(hwnd, TDM_SET_BUTTON_ELEVATION_REQUIRED_STATE, 12, 1);
+        SendMessage(hwnd, TDM_SET_BUTTON_ELEVATION_REQUIRED_STATE, 13, 1);
+        SendMessage(hwnd, TDM_ENABLE_BUTTON, 11, 0);
+        SendMessage(hwnd, TDM_ENABLE_BUTTON, 13, 0);
+        SendMessage(hwnd, TDM_ENABLE_RADIO_BUTTON, 11, 0);
         SendMessage(hwnd, TDM_SET_PROGRESS_BAR_MARQUEE, TRUE, 0);
     }
     if (msg == TDN_HYPERLINK_CLICKED)
     {
         LPCWSTR link = (LPCWSTR)lParam;
-
         if (std::wstring(L"off") == link)
         {
-            //DarkProgressBar::disable();
             SFTRS::DarkTaskDialog::setTheme(SFTRS::DarkTaskDialog::light);
         }
-
         if (std::wstring(L"on") == link)
         {
-            //DarkProgressBar::enable();
             SFTRS::DarkTaskDialog::setTheme(SFTRS::DarkTaskDialog::dark);
         }
-
         if (std::wstring(L"page2") == link)
         {
-            TASKDIALOGCONFIG page2{};
-            page2.cbSize = sizeof(TASKDIALOGCONFIG);
-            page2.dwCommonButtons = TDCBF_CLOSE_BUTTON;
-            page2.pszWindowTitle = L"page #2";
-            page2.pszMainIcon = MAKEINTRESOURCE(-8);
-            page2.pszMainInstruction = L"TaskDialog Page #2";
-            page2.pszContent = L"This is mostly empty page 2 of sample TaskDialog";
-            page2.pfCallback = taskdialogcallback;
             SendMessage(hwnd, TDM_NAVIGATE_PAGE, NULL, (LONG_PTR)&page2);
         }
+    }
+    if (msg == TDN_BUTTON_CLICKED)
+    {
+        if (wParam == 10)
+            SendMessage(hwnd, TDM_NAVIGATE_PAGE, NULL, (LONG_PTR)&page1);
+        return (wParam == IDCLOSE) ? S_OK : S_FALSE;
     }
 
     return S_OK;
 }
 
-
-int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
+int WINAPI wWinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPWSTR, _In_ int)
 {
     SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
 
-    //DarkProgressBar::enable();
     SFTRS::DarkTaskDialog::setTheme(SFTRS::DarkTaskDialog::dark);
 
-    const TASKDIALOG_BUTTON radio[] = { {0, L"Radio button\nwith two lines"},
-                                    {1, L"Second button is disabled"},
-                                    {2, L"Just a normal dario button"} };
 
-    const TASKDIALOG_BUTTON commands[] = { {0, L"Command button\nwith two lines"},
-                                {1, L"Disabled command button"},
-                                {2, L"Command button with shield"},
-                                {3, L"Disabled command button with shield"},
-                                {4, L"Normal command button"} };
+    // PAGE 1
+    const TASKDIALOG_BUTTON radio[] = { {10, L"Radio button\nwith two lines"},
+                                        {11, L"The second radio button is disabled"},
+                                        {12, L"Just a normal radio button"} };
 
-    TASKDIALOGCONFIG tdc = {};
-    tdc.cbSize = sizeof(TASKDIALOGCONFIG);
+    const TASKDIALOG_BUTTON commands[] = { {10, L"Command button\nwith two lines"},
+                                            {11, L"Disabled command button"},
+                                            {12, L"Command button with shield"},
+                                            {13, L"Disabled command button with shield"},
+                                            {14, L"Normal command button"} };
+    page1.cbSize = sizeof(TASKDIALOGCONFIG);
+    page1.dwFlags = TDF_ENABLE_HYPERLINKS | TDF_USE_COMMAND_LINKS | TDF_EXPAND_FOOTER_AREA | TDF_SHOW_MARQUEE_PROGRESS_BAR;
+    page1.dwCommonButtons = TDCBF_CLOSE_BUTTON;
+    page1.pszWindowTitle = L"Dark Task Dialog Sample";
+    page1.pszMainIcon = TD_INFORMATION_ICON;
+    page1.pszMainInstruction = L"SFTRS::DarkTaskDialog";
+    page1.pszContent = L"This task dialog sample showcases most of the controls a task dialog can contain.\n\
+You can dynamically control the theme here using the following links : \n\n\
+<A HREF=\"off\">Switch to light theme</A>\n\<A HREF=\"on\">Switch to dark theme</A>\n\n\
+Additionally, there is <A HREF=\"page2\">another page</A> added for testing purposes.\n\n\
+Other controls are available below.";
+    page1.cButtons = 5;
+    page1.pButtons = commands;
+    page1.nDefaultButton = TDCBF_CLOSE_BUTTON;
+    page1.cRadioButtons = 3;
+    page1.pRadioButtons = radio;
+    page1.pszVerificationText = L"Verification text";
+    page1.pszExpandedInformation = L"Expanded information.\n\
+Can be multiline and contain links. For example:\n\
+<A HREF=\"off\">Switch to light theme</A>\n\
+<A HREF=\"on\">Switch to dark theme</A>";
+    page1.pszExpandedControlText = L"Hide expanded information";
+    page1.pszCollapsedControlText =  L"Show expanded information";
+    page1.pszFooterIcon = TD_SHIELD_ICON;
+    page1.pszFooter = L"This is the footer area.\n\
+It can also be multiline and contain links. For example, here is the link to <A HREF=\"page2\">page #2</A>.";
+    page1.pfCallback = taskdialogcallback;
+    page1.lpCallbackData = 1;
 
-    tdc.dwFlags = TDF_ENABLE_HYPERLINKS
-        | TDF_USE_COMMAND_LINKS | TDF_EXPAND_FOOTER_AREA | TDF_SHOW_MARQUEE_PROGRESS_BAR;
-    tdc.dwCommonButtons = TDCBF_OK_BUTTON | TDCBF_CLOSE_BUTTON;
-    tdc.pszWindowTitle = L"Window Title";
-    tdc.pszMainIcon = TD_INFORMATION_ICON;
-    tdc.pszMainInstruction = L"TaskDialog example";
-    tdc.pszContent = L"This task dailog sample shows most of the controls task dialog can contian\n\
-You can <A HREF=\"off\">switch dark mode off</A> for progress bar only.\n\
-<A HREF=\"on\">Switchng on</A> is also possible; but only if it was already on earlier\n\
-TaskDailog is usually a short living window; so changing theme on the fly is not possible. At least now.\n\
-Where is also <A HREF=\"page2\">another page</A> added for testing purposes";
-    tdc.cButtons = 4;
-    tdc.pButtons = commands;
-    tdc.nDefaultButton = TDCBF_CLOSE_BUTTON;
-    tdc.cRadioButtons = 3;
-    tdc.pRadioButtons = radio;
-    tdc.pszVerificationText = L"TaskDialog verification text";
-    tdc.pszExpandedInformation = L"TaskDialog extended information";
-    tdc.pszExpandedControlText = L"TaskDialog expanded control text";
-    tdc.pszCollapsedControlText = L"TaskDialog collapsed control text";
-    tdc.pszFooterIcon = TD_SHIELD_ICON;
-    tdc.pszFooter = L"TaskDialog footer area <A HREF=\"page2\">with a link to page #2</A>.";
-    tdc.pfCallback = taskdialogcallback;
+
+    // PAGE 2
+    const TASKDIALOG_BUTTON commandsP2[] = { {10, L"Return to first page"} };
+    page2.cbSize = sizeof(TASKDIALOGCONFIG);
+    page2.pszWindowTitle = L"page #2";
+    page2.pszMainIcon = MAKEINTRESOURCE(-8);
+    page2.pszMainInstruction = L"TaskDialog Page #2";
+    page2.pszContent = L"This is mostly empty page 2 of sample TaskDialog";
+    page2.cButtons = 1;
+    page2.pButtons = commandsP2;
+    page2.pfCallback = taskdialogcallback;
+
 
     BOOL checked = FALSE;
-    HRESULT res = TaskDialogIndirect(&tdc, NULL, NULL, &checked);
-
-    Sleep(1);
-
-    //DarkProgressBar::disable();
-    //DarkTaskDialog::disable();
+    TaskDialogIndirect(&page1, NULL, NULL, &checked);
 
 }

@@ -1,5 +1,6 @@
 // © Softros Systems
-// GPL3 license
+// GPL3
+// github.com/SFTRS/DarkTaskDialog
 
 #pragma once
 
@@ -11,7 +12,7 @@
 #include <uxtheme.h>
 #pragma comment(lib, "uxtheme.lib")
 
-#pragma comment(lib, "Msimg32.lib") // Alphablend
+#pragma comment(lib, "Msimg32.lib")
 
 #include <gdiplus.h>
 #pragma comment(lib, "gdiplus.lib")
@@ -60,10 +61,10 @@ namespace SFTRS {
             
             //Early subclassing of the SysLink control to eliminate blinking during page switches.
             static HWND(WINAPI* trueCreateWindowEx)(DWORD, LPCWSTR, LPCWSTR, DWORD, int, int, int, int, HWND, HMENU, HINSTANCE, LPVOID) = CreateWindowExW;
-            static std::set<HWND> taskDialogs;
 
 
             /* DATA STORAGE */
+            static std::set<HWND> taskDialogs;
             static Theme theme;
             struct TaskDalogCallbackWrap
             {
@@ -400,7 +401,7 @@ namespace SFTRS {
                 return retVal;
             }
 
-            enum Reason {ThemeSwith, NewPage};
+            enum Reason {ThemeSwitch, NewPage};
             BOOL CALLBACK EnumChildProc(HWND hwnd, LPARAM lParam)
             {
                 Reason reason = (Reason)lParam;
@@ -510,11 +511,12 @@ namespace SFTRS {
                     taskDialogs.erase(hwnd);
                 }
 
+                HRESULT resilt = S_OK;
                 TaskDalogCallbackWrap* trueCallBackData = (TaskDalogCallbackWrap*)lpRefData;
                 if (trueCallBackData->pfCallback)
-                    trueCallBackData->pfCallback(hwnd, msg, wParam, lParam, trueCallBackData->lpCallbackData);
+                    resilt = trueCallBackData->pfCallback(hwnd, msg, wParam, lParam, trueCallBackData->lpCallbackData);
 
-                return S_OK;
+                return resilt;
             }
 
 
@@ -552,7 +554,7 @@ namespace SFTRS {
 
             for (HWND hwnd : detail::taskDialogs)
             {
-                detail::update(hwnd, detail::ThemeSwith);
+                detail::update(hwnd, detail::ThemeSwitch);
             }
         }
     }
