@@ -294,16 +294,28 @@ namespace SFTRS {
 
             HRESULT WINAPI myDrawThemeBackground(HTHEME  hTheme, HDC hdc, int iPartId, int iStateId, LPCRECT pRect, LPCRECT pClipRect)
             {
+                HRESULT result;
                 if ((iPartId == BP_COMMANDLINKGLYPH || iPartId == BP_COMMANDLINK) && painting && iStateId != PBS_DISABLED)
                 {
                     MemoryBitmapAndDC canvas(pRect);
-                    HRESULT result = trueDrawThemeBackground(hTheme, canvas.DC, iPartId, iStateId, &canvas.rect, NULL);
+                    result = trueDrawThemeBackground(hTheme, canvas.DC, iPartId, iStateId, &canvas.rect, NULL);
                     AdjustBrightness(canvas.DC, &canvas.rect, canvas.hBitmap, iPartId == BP_COMMANDLINK ? 1.0f : 0.35f);
                     AlphaBlend(hdc, pRect->left, pRect->top, canvas.width, canvas.height, canvas.DC, 0, 0, canvas.width, canvas.height, blend_f);
                     return result;
                 }
 
-                return trueDrawThemeBackground(hTheme, hdc, iPartId, iStateId, pRect, pClipRect);
+                result = trueDrawThemeBackground(hTheme, hdc, iPartId, iStateId, pRect, pClipRect);
+
+                if (painting && iPartId == PP_FILL) // Progress bar color fill.
+                {
+                    AdjustBrightness(hdc, pRect, NULL, -0.2f);
+                }
+                if (painting && iPartId == PP_TRANSPARENTBAR) // Progress bar background.
+                {
+                    AdjustBrightness(hdc, pRect);
+                }
+
+                return result;
             }
 
             LRESULT CALLBACK Subclassproc(HWND, UINT, WPARAM, LPARAM, UINT_PTR, DWORD_PTR);
