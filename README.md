@@ -1,6 +1,8 @@
 # DarkTaskDialog
 Win32 TaskDialog Dark Theme Header-Only Library  
 
+<img src="https://github.com/SFTRS/DarkTaskDialog/assets/28443945/ae45505c-bca0-4c31-853c-9c6d88eea3c4" width="547px">
+
 ## Project
 Windows 10 and Windows 11 lack support for the dark mode in the TaskDialog API. This project adds support for the dark theme to all its features without losing functionality, including callbacks and multiple pages.
 
