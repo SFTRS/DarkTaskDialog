@@ -9,19 +9,33 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
     </Filter>
+    <Filter Include="Detours">
+      <UniqueIdentifier>{779aa2ba-af76-407f-a191-38c813f9b2a9}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DarkTaskDialogSample.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\detours\detours.cpp">
+      <Filter>Detours</Filter>
+    </ClCompile>
+    <ClCompile Include="..\detours\disasm.cpp">
+      <Filter>Detours</Filter>
+    </ClCompile>
+    <ClCompile Include="..\detours\modules.cpp">
+      <Filter>Detours</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\DarkTaskDialog.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\detours\detours.h">
+      <Filter>Detours</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
     <None Include="..\README.md" />
   </ItemGroup>
 </Project>

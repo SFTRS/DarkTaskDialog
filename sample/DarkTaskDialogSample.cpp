@@ -16,7 +16,7 @@
 static TASKDIALOGCONFIG page1 = {};
 static TASKDIALOGCONFIG page2 = {};
 
-HRESULT CALLBACK taskdialogcallback(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, LONG_PTR lpRefData)
+static HRESULT CALLBACK taskdialogcallback(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, LONG_PTR lpRefData)
 {
     if (msg == TDN_CREATED || msg == TDN_NAVIGATED && lpRefData==1)
     {
@@ -78,7 +78,7 @@ int WINAPI wWinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPWSTR, _In_ int)
     page1.pszMainInstruction = L"SFTRS::DarkTaskDialog";
     page1.pszContent = L"This task dialog sample showcases most of the controls a task dialog can contain.\n\
 You can dynamically control the theme here using the following links : \n\n\
-<A HREF=\"off\">Switch to light theme</A>\n\<A HREF=\"on\">Switch to dark theme</A>\n\n\
+<A HREF=\"off\">Switch to light theme</A>\n<A HREF=\"on\">Switch to dark theme</A>\n\n\
 Additionally, there is <A HREF=\"page2\">another page</A> added for testing purposes.\n\n\
 Other controls are available below.";
     page1.cButtons = 5;

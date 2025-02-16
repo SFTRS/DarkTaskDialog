@@ -7,7 +7,6 @@
 #include <windows.h>
 
 #include <detours.h>
-#pragma comment(lib, "Detours.lib")
 
 #include <uxtheme.h>
 #pragma comment(lib, "uxtheme.lib")
@@ -21,6 +20,7 @@
 #include <Vsstyle.h>
 
 #include <string>
+#include <memory>
 
 #include <dwmapi.h>
 #pragma comment(lib, "Dwmapi.lib")
@@ -129,9 +129,9 @@ namespace SFTRS {
 
             };
 
-            Gdiplus::Bitmap* GdiBitmapFromHBITMAPwithAlpha(HBITMAP source, int width, int height)
+            std::unique_ptr<Gdiplus::Bitmap> GdiBitmapFromHBITMAPwithAlpha(HBITMAP source, int width, int height)
             {
-                Gdiplus::Bitmap* bitmap = new Gdiplus::Bitmap(width, height, PixelFormat32bppARGB);
+                auto bitmap = std::make_unique<Gdiplus::Bitmap>(width, height, PixelFormat32bppARGB);
 
                 Gdiplus::BitmapData target_info;
                 Gdiplus::Rect rect(0, 0, width, height);
@@ -149,7 +149,7 @@ namespace SFTRS {
 
             void AdjustBrightness(HDC hdc, LPCRECT rect, HBITMAP bitmap = NULL, float f = -0.78)
             {
-                Gdiplus::Bitmap* bmp;
+                std::unique_ptr<Gdiplus::Bitmap> bmp;
                 if (!bitmap)
                 {
                     MemoryBitmapAndDC canvas(rect);
@@ -177,9 +177,8 @@ namespace SFTRS {
                 };
                 Gdiplus::ImageAttributes imageAttr;
                 imageAttr.SetColorMatrix(&colorMatrix, Gdiplus::ColorMatrixFlagsDefault, Gdiplus::ColorAdjustTypeBitmap);
-                graphics.DrawImage(bmp, gdiRect, 0, 0, gdiRect.Width, gdiRect.Height, Gdiplus::UnitPixel, &imageAttr);
+                graphics.DrawImage(bmp.get(), gdiRect, 0, 0, gdiRect.Width, gdiRect.Height, Gdiplus::UnitPixel, &imageAttr);
 
-                delete bmp;
             }
 
 
@@ -411,7 +410,7 @@ namespace SFTRS {
 
                 if (className == WC_LINK)
                 {
-                    LITEM linkChanges = { LIF_ITEMINDEX | LIF_STATE, 0, theme==dark?LIS_DEFAULTCOLORS:0, LIS_DEFAULTCOLORS };
+                    LITEM linkChanges = { LIF_ITEMINDEX | LIF_STATE, 0, theme==dark?LIS_DEFAULTCOLORS:0u, LIS_DEFAULTCOLORS };
                     while (SendMessage(hwnd, LM_SETITEM, 0, (LPARAM)&linkChanges))
                     {
                         linkChanges.iLink++;
